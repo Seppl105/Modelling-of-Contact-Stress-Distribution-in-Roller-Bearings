@@ -45,12 +45,13 @@ class ContactParams:
 @dataclass
 class GridParams:
     """Discretisation of the contact domain."""
-    x_num_grid_points: int = 1000             # Number of points in the x-direction
+    x_num_grid_points: int = 500             # Number of points in the x-direction
     x_extent_factor: float = 1.5    # Domain half-width as multiple of contact half-width a
     
-    z_num_grid_points: int = 1000              # Number of points in the z-direction
-    z_max_factor: float = 1.8       # Max depth as multiple of a
-    individual_z_factors = [z_max_factor, 1, 1, 1]
+    z_num_grid_points: int = 4000              # Number of points in the z-direction
+    z_max_factor: float = 2#1.8       # Max depth as multiple of a
+    z_distance_from_zero: float = 10**(-2)
+    individual_z_factors = [z_max_factor, z_max_factor, z_max_factor, z_max_factor]
     integration_sheme:str = ""
 
 
@@ -72,7 +73,8 @@ class Config:
     
     def create_depth_grid(self) -> np.ndarray:
         z_max = self.contact.a * self.grid.z_max_factor
-        return np.linspace(- z_max, - z_max / self.grid.z_num_grid_points, self.grid.z_num_grid_points) # first node slightly below z=0 becuase of singualarity at z=0
+        #return np.linspace(- z_max, - z_max / self.grid.z_num_grid_points, self.grid.z_num_grid_points) # first node slightly below z=0 becuase of singualarity at z=0
+        return np.linspace(- z_max, - self.grid.z_distance_from_zero, self.grid.z_num_grid_points) # first node slightly below z=0 becuase of singualarity at z=0
 
     # def create_depth_grid_normalized(self) -> list[float, np.ndarray]:
     #     z_max = self.contact.a * self.grid.z_max_factor
