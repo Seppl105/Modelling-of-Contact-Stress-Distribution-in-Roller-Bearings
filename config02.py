@@ -13,7 +13,7 @@ class MaterialParams:
     E_indentor: float = 210e9       # [Pa] Young's modulus
     nu_indentor: float = 0.3        # [-] Poisson's ratio
     E_half_space: float = 210e9       # [Pa] Young's modulus
-    nu_half_spcae: float = 0.3        # [-] Poisson's ratio
+    nu_half_space: float = 0.3        # [-] Poisson's ratio
 
     @property
     def E_star(self) -> float:
@@ -25,7 +25,9 @@ class MaterialParams:
 class ContactParams:
     """Geometry and loading of the line contact"""
     a = 0.02        # [m] contact radius
+    roller_seperation = 0.08 # [m] distance bettwen roller midpoints#######################################################################
     p_max = 1000    # [N/m^2]
+    number_of_rollers = 1 ##########################################################################
     #R1: float = 0.01        # Radius of curvature, body 1 [m]  (use np.inf for flat)
     #R2: float = np.inf      # Radius of curvature, body 2 [m]  (flat surface)
     #F: float = 1000.0       # Normal line load [N/m]
@@ -35,23 +37,27 @@ class ContactParams:
     #     """Equivalent radius 1/R* = 1/R1 + 1/R2 [m]."""
     #     return 1.0 / (1.0 / self.R1 + (0.0 if np.isinf(self.R2) else 1.0 / self.R2))
 
-    def pressure_default(self, x: np.ndarray) -> np.ndarray:
-        p = np.zeros_like(x)
-        inside = np.abs(x/self.a) <= 1.0
-        p[inside] = self.p_max * np.sqrt(1.0 - (x[inside]/self.a)**2)
-        #print( (1.0 - (x/self.a)**2)[np.abs(x/self.a) <= 1.0])
-        return p
+    # def pressure_default(self, x: np.ndarray) -> np.ndarray:
+    #     p = np.zeros_like(x)
+    #     inside = np.abs(x/self.a) <= 1.0
+    #     p[inside] = self.p_max * np.sqrt(1.0 - (x[inside]/self.a)**2)
+    #     #print( (1.0 - (x/self.a)**2)[np.abs(x/self.a) <= 1.0])
+    #     return p
+    
+    
+    
+  
 
 @dataclass
 class GridParams:
     """Discretisation of the contact domain."""
-    x_num_grid_points: int = 500             # Number of points in the x-direction
-    x_extent_factor: float = 1.5    # Domain half-width as multiple of contact half-width a
+    x_num_grid_points_per_roller: int = 500             # Number of points in the x-direction; take an even number
+    #x_extent_factor: float = 1.5    # Domain half-width as multiple of contact half-width a
     
-    z_num_grid_points: int = 4000              # Number of points in the z-direction
+    z_num_grid_points: int = 1000              # Number of points in the z-direction
     z_max_factor: float = 2#1.8       # Max depth as multiple of a
-    z_distance_from_zero: float = 10**(-2)
-    individual_z_factors = [z_max_factor, z_max_factor, z_max_factor, z_max_factor]
+    z_distance_from_zero: float = 10**(-3)
+    individual_z_factors = [z_max_factor, z_max_factor * 0.9 , z_max_factor * 0.8, z_max_factor] # first one should be the default value for scaling, the others can be choosen individually for the pltos
     integration_sheme:str = ""
 
 
@@ -62,20 +68,42 @@ class Config:
     contact: ContactParams  = field(default_factory=ContactParams)
     grid: GridParams        = field(default_factory=GridParams)
 
+
+
     # Output control
     #output_dir: str = "results"
     #save_plots: bool = True
     #show_plots: bool = True
 
     def create_surface_grid(self) -> np.ndarray:
-        x_max = self.contact.a * self.grid.x_extent_factor
-        return np.linspace(- x_max, x_max, self.grid.x_num_grid_points)
+        #x_max = (self.contact.a + self.contact.roller_seperation / 2 ) * self.contact.number_of_rollers
+        x_max = (self.contact.roller_seperation / 2 ) * self.contact.number_of_rollers
+        return np.linspace(- x_max, x_max, self.grid.x_num_grid_points_per_roller * self.contact.number_of_rollers)
     
     def create_depth_grid(self) -> np.ndarray:
         z_max = self.contact.a * self.grid.z_max_factor
         #return np.linspace(- z_max, - z_max / self.grid.z_num_grid_points, self.grid.z_num_grid_points) # first node slightly below z=0 becuase of singualarity at z=0
         return np.linspace(- z_max, - self.grid.z_distance_from_zero, self.grid.z_num_grid_points) # first node slightly below z=0 becuase of singualarity at z=0
 
+    def pressure_default(self, x: np.ndarray) -> np.ndarray:
+        # initialize pressure array with length of x grid
+        p = np.zeros_like(x)
+        
+        # calcualte pressure distribution 
+        inside = np.abs(x/self.contact.a) <= 1.0
+        p_contact_area = self.contact.p_max * np.sqrt(1.0 - (x[inside]/self.contact.a)**2)
+        
+        # split x grid into roller sections
+        self.grid.x_num_grid_points_per_roller
+        p_2D = p.reshape(self.contact.number_of_rollers, self.grid.x_num_grid_points_per_roller) # different view of p; changes to p_2D will change p
+        slice_mid = self.grid.x_num_grid_points_per_roller // 2 
+        slice_start = slice_mid - len(p_contact_area) // 2
+        slice_end = slice_start + len(p_contact_area)
+        # insert pressure at each roller section
+        p_2D[:, slice_start:slice_end] = p_contact_area # upadtes p
+
+        #print( (1.0 - (x/self.a)**2)[np.abs(x/self.a) <= 1.0])
+        return p
     # def create_depth_grid_normalized(self) -> list[float, np.ndarray]:
     #     z_max = self.contact.a * self.grid.z_max_factor
 
@@ -90,6 +118,8 @@ class Config:
 
 
 default_config = Config()
+default_config_three_rollers = Config()
+default_config_three_rollers.contact.number_of_rollers = 3 ################################################
 
 
 # contact_params.a = 0.05

@@ -71,6 +71,16 @@ def compute_subsurface_stresses_trapezoid(x: np.ndarray , z: np.ndarray , p: np.
     
     return cp.asnumpy(s_xx), cp.asnumpy(s_zz), cp.asnumpy(s_xz)
 
+def compute_von_Mises(stress_components:list[np.ndarray], nu_half_space: float) -> np.ndarray:
+    s_xx, s_zz, s_xz = stress_components
+
+    # plane strain (epsilon_yy = 0)
+    s_yy = nu_half_space * (s_xx + s_zz)
+    s_xy = 0
+    s_yz = 0
+    
+    return np.sqrt(s_xx**2 + s_yy**2 + s_zz**2 - s_xx*s_yy - s_xx*s_zz - s_yy*s_zz + 3*(s_xy**2+s_xz**2+s_yz**2) )
+
 # older version without gpu acceleration
 
 # def compute_subsurface_stresses_trapezoid(x: np.ndarray , z: np.ndarray , p: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -136,8 +146,8 @@ def plot_stresses_with_pressure(x, z, p, stresses: list[np.ndarray], labels: lis
     col_spacing controls horizontal whitespace between columns.
     """
 
-    if labels is None:
-        labels = [r"$\sigma_{xx}$", r"$\sigma_{zz}$", r"$\tau_{xz}$"]
+    # if labels is None:
+    #     labels = [r"$\sigma_{xx}$", r"$\sigma_{zz}$", r"$\tau_{xz}$"]
 
     n = len(stresses)
 
