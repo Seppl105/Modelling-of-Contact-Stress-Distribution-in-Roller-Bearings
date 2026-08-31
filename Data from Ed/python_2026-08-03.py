@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 # go to current directory
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -53,3 +54,61 @@ if rollerData.shape[0] == globalData.shape[0]:
     print("\nNumber of time steps test: passed\nrollerData.shape: ", rollerData.shape, "\nglobalData.shape: ", globalData.shape)
 else:
     print("\n\n\nERROR\n\nNumber of time steps test: FAILED\nrollerData.shape: ", rollerData.shape, "\nglobalData.shape: ", globalData.shape)
+    # ??? hot fix
+    print("attempt hot fix: rollerData is trimmed")
+    rollerData = rollerData[:-1,:,:]
+    if rollerData.shape[0] == globalData.shape[0]:
+        print("Hot fix worked\nNumber of time steps test: passed\nrollerData.shape: ", rollerData.shape, "\nglobalData.shape: ", globalData.shape)
+    else: print("Hot fix failed!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+
+
+
+##### Save pressure fields on a segment of the inner raceway
+### Assumptions to remember:
+# - theta in [-pi, pi]
+
+### Parameters
+
+number_of_closest_rollers = 7 # number of rollers accounted for
+angle_offset = 0#np.pi/6 # specific segments of the inner raceway can be investigated utilizing this offset
+theta = theta + angle_offset
+#length_of_line_contact = 1 # ??? roller width ????
+epsilon = 1e-9 # prevent division by zero if contact path vanishes
+output_filename = f"inner_ring_segment_pressure_{windCase}_closest_rollers_{number_of_closest_rollers}_angle_offset_{round(angle_offset, 2)}"
+
+
+# find closest rollers at each time step
+# 1. calculate distance of roller to segment
+roller_locations = rollerData[:, :, 1]
+angle_diff = (roller_locations - theta[:, np.newaxis] + np.pi) % (2*np.pi) - np.pi # np.newaxis accounts for the time dimension;
+                                                                                   # account for 2*pi periodicity; 
+                                                                                   # addign and subtratcing np.pi shifts the frame of reference from [-pi,pi[ to [0,2pi[ and back
+abs_angle_diff = np.abs(angle_diff) # absolute difference of the angle of each roller to the angle of the segment for each time step
+# 2. determine the closes rollers to the segment
+closest_rollers_idx = np.argsort(abs_angle_diff, axis=1)[:, :number_of_closest_rollers] # safe the indices of the closes rollers
+# 3. create time indexing
+time_idx = np.arange(rollerData.shape[0])[:, np.newaxis]
+
+# Extraction of specifc variables with shape: time x number_of_closest_rollers
+loads = rollerData[time_idx, closest_rollers_idx, 0]       # Roller load (N)
+relative_locations = angle_diff[time_idx, closest_rollers_idx]    # Relative angular position (rad)
+a_in = rollerData[time_idx, closest_rollers_idx, 2]        # Inner semi-axis a (mm)
+b_in = rollerData[time_idx, closest_rollers_idx, 3]        # Inner semi-axis b (mm)
+
+
+p_max = 3 * loads / (2 * np.pi * a_in * b_in + epsilon)
+
+# ??? npz is saved as binary and more compressed but not as easyly readible
+np.savez_compressed(
+    output_filename,
+    time=time,
+    roller_indices=closest_rollers_idx,
+    relative_angle_rad=relative_locations,
+    load_N=loads,
+    a_in_mm=a_in,
+    b_in_mm=b_in,
+    P_max_inner_MPa=p_max
+)
+print(f"Segment data successfully saved to {output_filename}")
+
