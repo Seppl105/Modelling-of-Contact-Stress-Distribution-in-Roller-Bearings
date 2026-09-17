@@ -38,8 +38,10 @@ Fa      = globalData[:,5] # bearing axial applied load in Newtons
 
 Fr      = globalData[:,6] # bearing radial applied load in Newtons
 
-theta   = globalData[:,7] # inner ring position over time in rads
+theta_force   = globalData[:,7] # inner ring position over time in rads
 
+theta = - np.cumsum(shaftSp) * ( time[1] - time[0] ) # theta value using integration assuming constant time steps; negative sign infront due to convention of clockwise turning turbine looking from upwind
+theta = theta % (2*np.pi)
 
 ### Checks:
 print(rollerData)
@@ -70,7 +72,7 @@ else:
 
 ### Parameters
 
-number_of_closest_rollers = 7 # number of rollers accounted for
+number_of_closest_rollers = 3 # number of rollers accounted for
 angle_offset = 0#np.pi/6 # specific segments of the inner raceway can be investigated utilizing this offset
 theta = theta + angle_offset
 #length_of_line_contact = 1 # ??? roller width ????
@@ -99,7 +101,7 @@ b_in = rollerData[time_idx, closest_rollers_idx, 3]        # Inner semi-axis b (
 
 p_max = 3 * loads / (2 * np.pi * a_in * b_in + epsilon)
 
-# ??? npz is saved as binary and more compressed but not as easyly readible
+# ??? npz is saved as binary and more compressed but not as easyly readible ???
 np.savez_compressed(
     output_filename,
     time=time,

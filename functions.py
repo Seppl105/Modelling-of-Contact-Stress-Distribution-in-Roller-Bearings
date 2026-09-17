@@ -266,3 +266,5 @@ def plot_sigma_zz_convergence(config, z_grid_sizes, z_batch_size=500):
     plt.grid(False)
     plt.tight_layout()
     plt.show(block=False)
+
+    

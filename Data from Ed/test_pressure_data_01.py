@@ -23,6 +23,13 @@ P_max = saved_data['P_max_inner_MPa']
 a_in = saved_data['a_in_mm']
 b_in = saved_data['b_in_mm']
 
+# 2. SPEED BOOST: Subsample the frames (e.g., take every 10th frame)
+skip_factor = 1 
+time = time[::skip_factor]
+rel_angles = rel_angles[::skip_factor]
+P_max = P_max[::skip_factor]
+b_in = b_in[::skip_factor]
+
 # 2. Setup geometry
 R_inner = 500.0  # Bearing inner ring radius in mm
 theta_plot = np.linspace(-0.4, 0.4, 1000)
@@ -65,7 +72,7 @@ anim = FuncAnimation(fig, update, init_func=init, frames=len(time), interval=40,
 
 # Option A: Save it as a GIF to view externally
 output_gif = f'pressure_animation_{windCase}_closest_rollers_{number_of_closest_rollers}_angle_offset_{round(angle_offset, 2)}.gif'
-anim.save(output_gif, writer=PillowWriter(fps=25))
+anim.save(output_gif, writer=PillowWriter(fps=2))
 print(f"Animation saved successfully as {output_gif}")
 
 # Option B: Display interactively in a window

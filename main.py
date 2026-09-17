@@ -10,6 +10,13 @@ import functions as func
 # Start up: Run from virtual environment with cupy installed (e.g. by running "conda activate Laptop-Masterthesis")
 #
 
+# Input Data Formats:
+# "*_10B" refers to a file with 10m/s mean wind speed and medium turbulence intensity
+#
+# globalBearingData - csv with e.g. wind speed, turbine power, bearing applied loads
+# rollerLevelData - 3D array with time, roller number, variable value for each roller individually
+
+
 # To do's:
 # 
 
@@ -19,6 +26,7 @@ import functions as func
 
 from config01 import default_config as config
 from config02 import default_config_three_rollers as config
+from config03 import seperation_distance_config as config
 
 if __name__ == "__main__":
 
